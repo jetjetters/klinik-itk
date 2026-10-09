@@ -41,6 +41,8 @@ class SuratDokter extends Model
 
     const JENIS_SEHAT = 'surat_sehat';
     const JENIS_SAKIT = 'surat_sakit';
+    const JENIS_RUJUKAN = 'surat_rujukan';
+    const JENIS_BEROBAT = 'surat_berobat';
 
     public function rekamMedis(): BelongsTo
     {
@@ -62,11 +64,26 @@ class SuratDokter extends Model
         return $this->jenis_surat === self::JENIS_SAKIT;
     }
 
+    public function isSuratRujukan(): bool
+    {
+        return $this->jenis_surat === self::JENIS_RUJUKAN;
+    }
+
+    public function isSuratBerobat(): bool
+    {
+        return $this->jenis_surat === self::JENIS_BEROBAT;
+    }
+
     public static function generateNomorSurat(string $jenis): string
     {
         $tahun = date('Y');
         $bulan = date('m');
-        $prefix = $jenis === self::JENIS_SEHAT ? 'SKS' : 'SKK';
+        $prefix = match($jenis) {
+            self::JENIS_SEHAT => 'SKS',
+            self::JENIS_RUJUKAN => 'SKR',
+            self::JENIS_BEROBAT => 'SKB',
+            default => 'SKK',
+        };
         $fullPrefix = "{$prefix}/{$bulan}/{$tahun}";
         
         $lastSurat = \Illuminate\Support\Facades\DB::table('surat_dokters')

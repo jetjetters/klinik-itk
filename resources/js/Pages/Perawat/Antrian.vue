@@ -25,6 +25,7 @@ import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 import InputGroup from 'primevue/inputgroup';
 import InputGroupAddon from 'primevue/inputgroupaddon';
+import { formatDateTimeToLocalString } from '@/utils/date';
 
 interface AntrianItem {
     id: number;
@@ -337,52 +338,29 @@ const getHbCategory = (hb: number | null | undefined) => {
 };
 
 const openAnamnesisDialog = (item: AntrianItem) => {
-    selectedPasien.value = item;
-    form.rekam_medis_id = item.id;
-    
-    // Default golongan darah from patient data
-    form.golongan_darah = item.pasien?.golongan_darah || null;
-    
-    if (item.anamnesis) {
-        const td = item.anamnesis.tekanan_darah?.split('/') || [];
-        form.tekanan_darah_sistolik = td[0] ? parseInt(td[0]) : null;
-        form.tekanan_darah_diastolik = td[1] ? parseInt(td[1]) : null;
-        form.suhu = item.anamnesis.suhu;
-        form.nadi = item.anamnesis.nadi;
-        form.respirasi = item.anamnesis.respirasi;
-        form.tinggi_badan = item.anamnesis.tinggi_badan;
-        form.berat_badan = item.anamnesis.berat_badan;
-        form.keluhan_utama = item.anamnesis.keluhan_utama || '';
-        form.riwayat_penyakit_sekarang = item.anamnesis.riwayat_penyakit_sekarang || '';
-        form.riwayat_penyakit_dahulu = item.anamnesis.riwayat_penyakit_dahulu || '';
-        form.riwayat_alergi = item.anamnesis.riwayat_alergi || '';
-        form.riwayat_obat = item.anamnesis.riwayat_obat || '';
-        form.riwayat_keluarga = item.anamnesis.riwayat_keluarga || '';
-        form.skala_nyeri = item.anamnesis.skala_nyeri;
-        form.diagnosa_keperawatan = item.anamnesis.diagnosa_keperawatan || '';
-        form.intervensi_keperawatan = item.anamnesis.intervensi_keperawatan || '';
-        form.implementasi_keperawatan = item.anamnesis.implementasi_keperawatan || '';
-        form.evaluasi_keperawatan = item.anamnesis.evaluasi_keperawatan || '';
-        form.lingkar_perut = Number(item.anamnesis.lingkar_perut) || null;
-        form.is_hamil = Boolean(item.anamnesis.is_hamil);
-        form.is_menyusui = Boolean(item.anamnesis.is_menyusui);
-        form.tindak_lanjut = item.anamnesis.tindak_lanjut || '';
-        form.keterangan_tindak_lanjut = item.anamnesis.keterangan_tindak_lanjut || '';
-        form.gula_darah = item.anamnesis.gula_darah ? Number(item.anamnesis.gula_darah) : null;
-        form.jenis_gula_darah = item.anamnesis.jenis_gula_darah || null;
-        form.asam_urat = item.anamnesis.asam_urat ? Number(item.anamnesis.asam_urat) : null;
-        form.kolesterol = item.anamnesis.kolesterol ? Number(item.anamnesis.kolesterol) : null;
-        form.hemoglobin = item.anamnesis.hemoglobin ? Number(item.anamnesis.hemoglobin) : null;
-        form.buta_warna = item.anamnesis.buta_warna || null;
-    } else {
-        resetForm();
-        form.rekam_medis_id = item.id; // re-set because resetForm clears it
-    }
-    
     if (item.jenis_layanan === 'surat_sehat') {
+        selectedPasien.value = item;
+        form.rekam_medis_id = item.id;
+        form.golongan_darah = item.pasien?.golongan_darah || null;
+        
+        if (item.anamnesis) {
+            const td = item.anamnesis.tekanan_darah?.split('/') || [];
+            form.tekanan_darah_sistolik = td[0] ? parseInt(td[0]) : null;
+            form.tekanan_darah_diastolik = td[1] ? parseInt(td[1]) : null;
+            form.suhu = item.anamnesis.suhu;
+            form.nadi = item.anamnesis.nadi;
+            form.respirasi = item.anamnesis.respirasi;
+            form.tinggi_badan = item.anamnesis.tinggi_badan;
+            form.berat_badan = item.anamnesis.berat_badan;
+            form.keluhan_utama = item.anamnesis.keluhan_utama || '';
+            form.buta_warna = item.anamnesis.buta_warna || null;
+        } else {
+            resetForm();
+            form.rekam_medis_id = item.id;
+        }
         showSuratSehatDialog.value = true;
     } else {
-        showAnamnesisDialog.value = true;
+        router.visit(route('perawat.anamnesis.form', item.id));
     }
 };
 
@@ -506,19 +484,29 @@ const openEditDialog = (item: AntrianItem) => {
 const submitAntrian = () => {
     if (crudMode.value === 'create') {
         formAntrian.client_time = getClientTime();
-        formAntrian.post(route('antrian.store'), {
-            onSuccess: () => {
-                showCrudDialog.value = false;
-                toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Antrian ditambahkan', life: 3000 });
-            }
-        });
+        formAntrian
+            .transform((data) => ({
+                ...data,
+                tanggal_kunjungan: formatDateTimeToLocalString(data.tanggal_kunjungan),
+            }))
+            .post(route('antrian.store'), {
+                onSuccess: () => {
+                    showCrudDialog.value = false;
+                    toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Antrian ditambahkan', life: 3000 });
+                }
+            });
     } else if (selectedRekamMedisId.value) {
-        formAntrian.put(route('antrian.update', { rekamMedis: selectedRekamMedisId.value }), {
-            onSuccess: () => {
-                showCrudDialog.value = false;
-                toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Antrian diperbarui', life: 3000 });
-            }
-        });
+        formAntrian
+            .transform((data) => ({
+                ...data,
+                tanggal_kunjungan: formatDateTimeToLocalString(data.tanggal_kunjungan),
+            }))
+            .put(route('antrian.update', { rekamMedis: selectedRekamMedisId.value }), {
+                onSuccess: () => {
+                    showCrudDialog.value = false;
+                    toast.add({ severity: 'success', summary: 'Berhasil', detail: 'Antrian diperbarui', life: 3000 });
+                }
+            });
     }
 };
 
@@ -569,6 +557,30 @@ const getTipePasienLabel = (tipe: string) => {
         umum: 'Umum'
     };
     return labels[tipe] || tipe;
+};
+
+const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+        menunggu_perawat: 'Menunggu Perawat',
+        proses_anamnesis: 'Proses Anamnesis',
+        siap_dokter: 'Siap Dokter',
+        sedang_diperiksa: 'Sedang Diperiksa',
+        selesai: 'Selesai',
+        batal: 'Batal'
+    };
+    return labels[status] || status?.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || status;
+};
+
+const getStatusSeverity = (status: string) => {
+    const severities: Record<string, string> = {
+        menunggu_perawat: 'warn',
+        proses_anamnesis: 'info',
+        siap_dokter: 'info',
+        sedang_diperiksa: 'warn',
+        selesai: 'success',
+        batal: 'danger'
+    };
+    return severities[status] || 'secondary';
 };
 </script>
 
@@ -1101,7 +1113,7 @@ const getTipePasienLabel = (tipe: string) => {
                             </Column>
                             <Column header="Status" style="width: 120px">
                                 <template #body="{ data }">
-                                    <Tag :value="data.status" :severity="data.status === 'siap_dokter' ? 'info' : 'warn'" class="uppercase !text-[10px] !px-2" />
+                                    <Tag :value="getStatusLabel(data.status)" :severity="getStatusSeverity(data.status)" class="!text-[10px] !px-2 font-medium" />
                                 </template>
                             </Column>
                             <Column header="Aksi" style="width: 150px" class="text-center">
@@ -1174,7 +1186,7 @@ const getTipePasienLabel = (tipe: string) => {
                         <div>
                             <span class="text-gray-500">Jenis Layanan:</span>
                             <p class="font-medium">
-                                <Tag :value="getLayananLabel(selectedPasien.jenis_layanan || 'berobat')" severity="info" class="!text-[10px] uppercase" />
+                                <Tag :value="getLayananLabel(selectedPasien.jenis_layanan || 'berobat')" severity="info" class="!text-[10px] !px-2 font-medium" />
                             </p>
                         </div>
                         <div>
@@ -1677,7 +1689,7 @@ const getTipePasienLabel = (tipe: string) => {
                         <div>
                             <span class="text-gray-500">Jenis Layanan:</span>
                             <p class="font-medium">
-                                <Tag value="Surat Sehat" severity="success" class="!text-[10px] uppercase" />
+                                <Tag value="Surat Sehat" severity="success" class="!text-[10px] !px-2 font-medium" />
                             </p>
                         </div>
                     </div>
